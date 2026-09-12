@@ -1,4 +1,4 @@
-import { Check, Download, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
+import { Check, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CategoryIcon } from '@/components/CategoryIcon'
@@ -45,6 +45,10 @@ export function SettingsPage() {
   const [editIcon, setEditIcon] = useState('MoreHorizontal')
   const [editColor, setEditColor] = useState(COLOR_OPTIONS[0])
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordLoading, setPasswordLoading] = useState(false)
 
   async function handleAddCategory() {
     if (!newCategoryName.trim()) return
@@ -115,6 +119,28 @@ export function SettingsPage() {
     } catch {
       toast.error('Import fehlgeschlagen – ist die Datei ein gültiges Fixly-Backup?')
     }
+  }
+
+  async function handleChangePassword() {
+    setPasswordError(null)
+    if (newPassword.length < 6) {
+      setPasswordError('Das Passwort muss mindestens 6 Zeichen lang sein.')
+      return
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordError('Die Passwörter stimmen nicht überein.')
+      return
+    }
+    setPasswordLoading(true)
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPasswordLoading(false)
+    if (error) {
+      setPasswordError('Passwort konnte nicht geändert werden. Bitte versuch es erneut.')
+      return
+    }
+    setNewPassword('')
+    setNewPasswordConfirm('')
+    toast.success('Passwort geändert')
   }
 
   async function handleReset() {
@@ -322,8 +348,49 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Konto</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={() => supabase.auth.signOut()} className="gap-2">
+        <CardContent className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
+            <Label className="flex items-center gap-2 text-sm font-medium">
+              <KeyRound className="size-4" />
+              Passwort ändern
+            </Label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="newPassword" className="text-xs text-muted-foreground">
+                  Neues Passwort
+                </Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="newPasswordConfirm" className="text-xs text-muted-foreground">
+                  Bestätigen
+                </Label>
+                <Input
+                  id="newPasswordConfirm"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  minLength={6}
+                  autoComplete="new-password"
+                />
+              </div>
+              <Button onClick={handleChangePassword} disabled={passwordLoading} className="gap-2">
+                {passwordLoading ? 'Wird geändert…' : 'Ändern'}
+              </Button>
+            </div>
+            {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+          </div>
+
+          <Button variant="outline" onClick={() => supabase.auth.signOut()} className="w-fit gap-2">
             <LogOut className="size-4" />
             Abmelden
           </Button>
