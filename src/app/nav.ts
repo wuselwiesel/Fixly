@@ -8,3 +8,10 @@ export const NAV_ITEMS = [
   { to: '/haushalt', label: 'Haushalt', icon: Home, end: false },
   { to: '/einstellungen', label: 'Einstellungen', icon: Settings, end: false },
 ] as const
+
+/**
+ * The bottom tab bar only has room for so many comfortable, well-spaced
+ * targets. Settings is low-frequency, so on mobile it lives in the top bar
+ * instead of competing for space in the tab bar.
+ */
+export const MOBILE_TAB_ITEMS = NAV_ITEMS.filter((item) => item.to !== '/einstellungen')

@@ -1,19 +1,22 @@
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { NAV_ITEMS } from './nav'
+import { MOBILE_TAB_ITEMS } from './nav'
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-card/95 backdrop-blur lg:hidden">
-      {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+    <nav
+      className="fixed inset-x-3 z-40 flex items-center gap-1 rounded-2xl border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur lg:hidden"
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}
+    >
+      {MOBILE_TAB_ITEMS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}
           to={to}
           end={end}
           className={({ isActive }) =>
             cn(
-              'flex flex-1 flex-col items-center gap-0.5 px-0.5 py-2.5 text-[10px] font-medium text-muted-foreground',
-              isActive && 'text-primary',
+              'flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-[10px] font-medium text-muted-foreground transition-colors',
+              isActive ? 'bg-accent text-accent-foreground' : 'active:bg-muted',
             )
           }
         >
