@@ -32,7 +32,7 @@ export function useCategories(): Category[] {
     'categories',
     async () => {
       if (!userId) return []
-      const { data, error } = await supabase.from('categories').select('*').eq('user_id', userId).order('name')
+      const { data, error } = await supabase.from('categories').select('*').eq('user_id', userId).order('sort_order')
       if (error) throw error
       return (data ?? []).map(categoryFromRow)
     },
@@ -112,10 +112,15 @@ export async function toggleFavorite(id: string, isFavorite: boolean) {
   bump()
 }
 
-export async function createCategory(input: Omit<Category, 'id' | 'isCustom'>) {
+export async function createCategory(input: Omit<Category, 'id' | 'isCustom' | 'sortOrder'>) {
   const { data: userData } = await supabase.auth.getUser()
   const userId = userData.user?.id
   if (!userId) throw new Error('Not signed in')
+
+  const { count } = await supabase
+    .from('categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
 
   const { error } = await supabase.from('categories').insert({
     user_id: userId,
@@ -123,17 +128,27 @@ export async function createCategory(input: Omit<Category, 'id' | 'isCustom'>) {
     color: input.color,
     icon: input.icon,
     is_custom: true,
+    sort_order: count ?? 0,
   })
   if (error) throw error
   bump()
 }
 
-export async function updateCategory(id: string, input: Partial<Omit<Category, 'id' | 'isCustom'>>) {
+export async function updateCategory(id: string, input: Partial<Omit<Category, 'id' | 'isCustom' | 'sortOrder'>>) {
   const { error } = await supabase
     .from('categories')
     .update({ name: input.name, color: input.color, icon: input.icon })
     .eq('id', id)
   if (error) throw error
+  bump()
+}
+
+/** Swaps the sort position of two categories — used to move a category up/down in the list. */
+export async function swapCategoryOrder(a: Pick<Category, 'id' | 'sortOrder'>, b: Pick<Category, 'id' | 'sortOrder'>) {
+  const { error: e1 } = await supabase.from('categories').update({ sort_order: b.sortOrder }).eq('id', a.id)
+  if (e1) throw e1
+  const { error: e2 } = await supabase.from('categories').update({ sort_order: a.sortOrder }).eq('id', b.id)
+  if (e2) throw e2
   bump()
 }
 

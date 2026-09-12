@@ -64,6 +64,7 @@ export interface Category {
   color: string
   icon: string
   isCustom: boolean
+  sortOrder: number
 }
 
 export type IncomeInterval = 'monthly' | 'yearly' | 'once'

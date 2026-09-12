@@ -1,7 +1,6 @@
 import { Route, HashRouter, Routes } from 'react-router-dom'
 import { Layout } from '@/app/Layout'
 import { LoginPage } from '@/features/auth/LoginPage'
-import { MigrationPrompt } from '@/features/auth/MigrationPrompt'
 import { useAuthStore } from '@/features/auth/authStore'
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage'
 import { CalendarPage } from '@/features/calendar/CalendarPage'
@@ -24,7 +23,6 @@ function App() {
 
   return (
     <HashRouter>
-      <MigrationPrompt />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />

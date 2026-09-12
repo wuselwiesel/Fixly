@@ -24,6 +24,7 @@ create table public.categories (
   color text not null,
   icon text not null,
   is_custom boolean not null default false,
+  sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -291,20 +292,20 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.categories (user_id, name, color, icon, is_custom) values
-    (p_user_id, 'Wohnen', 'var(--color-chart-1)', 'Home', false),
-    (p_user_id, 'Energie', 'var(--color-chart-4)', 'Zap', false),
-    (p_user_id, 'Versicherungen', 'var(--color-chart-2)', 'ShieldCheck', false),
-    (p_user_id, 'Mobilität', 'var(--color-chart-5)', 'Car', false),
-    (p_user_id, 'Kommunikation', 'var(--color-chart-3)', 'Smartphone', false),
-    (p_user_id, 'Streaming & Unterhaltung', 'var(--color-chart-6)', 'Clapperboard', false),
-    (p_user_id, 'Software & Apps', 'var(--color-chart-1)', 'AppWindow', false),
-    (p_user_id, 'Mitgliedschaften', 'var(--color-chart-2)', 'Users', false),
-    (p_user_id, 'Finanzen', 'var(--color-chart-4)', 'Landmark', false),
-    (p_user_id, 'Familie', 'var(--color-chart-3)', 'Heart', false),
-    (p_user_id, 'Haustiere', 'var(--color-chart-5)', 'PawPrint', false),
-    (p_user_id, 'Gesundheit', 'var(--color-chart-6)', 'Stethoscope', false),
-    (p_user_id, 'Sonstiges', 'var(--color-chart-2)', 'MoreHorizontal', false);
+  insert into public.categories (user_id, name, color, icon, is_custom, sort_order) values
+    (p_user_id, 'Wohnen', 'var(--color-chart-1)', 'Home', false, 0),
+    (p_user_id, 'Energie', 'var(--color-chart-4)', 'Zap', false, 1),
+    (p_user_id, 'Versicherungen', 'var(--color-chart-2)', 'ShieldCheck', false, 2),
+    (p_user_id, 'Mobilität', 'var(--color-chart-5)', 'Car', false, 3),
+    (p_user_id, 'Kommunikation', 'var(--color-chart-3)', 'Smartphone', false, 4),
+    (p_user_id, 'Streaming & Unterhaltung', 'var(--color-chart-6)', 'Clapperboard', false, 5),
+    (p_user_id, 'Software & Apps', 'var(--color-chart-1)', 'AppWindow', false, 6),
+    (p_user_id, 'Mitgliedschaften', 'var(--color-chart-2)', 'Users', false, 7),
+    (p_user_id, 'Finanzen', 'var(--color-chart-4)', 'Landmark', false, 8),
+    (p_user_id, 'Familie', 'var(--color-chart-3)', 'Heart', false, 9),
+    (p_user_id, 'Haustiere', 'var(--color-chart-5)', 'PawPrint', false, 10),
+    (p_user_id, 'Gesundheit', 'var(--color-chart-6)', 'Stethoscope', false, 11),
+    (p_user_id, 'Sonstiges', 'var(--color-chart-2)', 'MoreHorizontal', false, 12);
 end;
 $$;
 

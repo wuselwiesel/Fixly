@@ -17,6 +17,7 @@ export function categoryFromRow(row: any): Category {
     color: row.color,
     icon: row.icon,
     isCustom: row.is_custom,
+    sortOrder: row.sort_order,
   }
 }
 

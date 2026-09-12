@@ -3,11 +3,16 @@ import {
   Ambulance,
   Anchor,
   AirVent,
+  Aperture,
   AppWindow,
   Apple,
+  ArrowLeftRight,
   Award,
   Baby,
   Backpack,
+  BadgeCent,
+  BadgeDollarSign,
+  BadgeEuro,
   BadgePercent,
   Bandage,
   BarChart2,
@@ -213,8 +218,66 @@ import {
   Wine,
   Wrench,
   Zap,
+  // Finance
+  DollarSign,
+  Euro,
+  PoundSterling,
+  IndianRupee,
+  JapaneseYen,
+  SwissFranc,
+  CircleDollarSign,
+  Handshake,
+  ReceiptText,
+  ScrollText,
+  FileSpreadsheet,
+  // Creative
+  Video,
+  Contrast,
+  Layers,
+  Shapes,
+  Eraser,
+  Sticker,
+  Wand2,
+  Paintbrush2,
+  SwatchBook,
+  Image,
+  Images,
+  FileImage,
+  Drama,
+  Theater,
+  MicVocal,
+  PenLine,
+  Spline,
+  // More animals
+  Rat,
+  Snail,
+  Shell,
+  Feather,
+  Egg,
+  Worm,
   type LucideIcon,
 } from 'lucide-react'
+
+/** Generic "K" badge for marking buy-now-pay-later style costs (e.g. Klarna) — not a reproduction of any trademarked logo. */
+function KlarnaIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <path d="M9 7v10" />
+      <path d="M9 12 15 7" />
+      <path d="M9 12l6 5" />
+    </svg>
+  )
+}
+const Klarna = KlarnaIcon as unknown as LucideIcon
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Home,
@@ -430,6 +493,49 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Hotel,
   Bookmark,
   FileText,
+  // Finance
+  DollarSign,
+  Euro,
+  PoundSterling,
+  IndianRupee,
+  JapaneseYen,
+  SwissFranc,
+  CircleDollarSign,
+  BadgeCent,
+  BadgeDollarSign,
+  BadgeEuro,
+  Handshake,
+  ArrowLeftRight,
+  ReceiptText,
+  ScrollText,
+  FileSpreadsheet,
+  Klarna,
+  // Creative
+  Aperture,
+  Video,
+  Contrast,
+  Layers,
+  Shapes,
+  Eraser,
+  Sticker,
+  Wand2,
+  Paintbrush2,
+  SwatchBook,
+  Image,
+  Images,
+  FileImage,
+  Drama,
+  Theater,
+  MicVocal,
+  PenLine,
+  Spline,
+  // More animals
+  Rat,
+  Snail,
+  Shell,
+  Feather,
+  Egg,
+  Worm,
   MoreHorizontal,
 }
 

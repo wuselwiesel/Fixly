@@ -1,5 +1,5 @@
-import { Check, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { ColorPicker, THEME_COLOR_PRESETS } from '@/components/ColorPicker'
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useUserId } from '@/features/auth/authStore'
-import { createCategory, deleteCategory, updateCategory, useCategories, useCosts } from '@/hooks/useCosts'
+import { createCategory, deleteCategory, swapCategoryOrder, updateCategory, useCategories, useCosts } from '@/hooks/useCosts'
 import { setPersonalSharing, useProfile } from '@/hooks/useProfile'
 import { COLOR_PALETTES } from '@/lib/palettes'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +27,11 @@ export function SettingsPage() {
   const profile = useProfile()
   const categories = useCategories()
   const costs = useCosts()
+  const costCountByCategory = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const cost of costs) map.set(cost.categoryId, (map.get(cost.categoryId) ?? 0) + 1)
+    return map
+  }, [costs])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryIcon, setNewCategoryIcon] = useState('MoreHorizontal')
@@ -61,6 +66,13 @@ export function SettingsPage() {
     await updateCategory(editingId, { name: editName.trim(), icon: editIcon, color: editColor })
     setEditingId(null)
     toast('Kategorie aktualisiert')
+  }
+
+  async function handleMoveCategory(index: number, direction: -1 | 1) {
+    const other = categories[index + direction]
+    const current = categories[index]
+    if (!other) return
+    await swapCategoryOrder(current, other)
   }
 
   async function handleDeleteCategory(category: Category) {
@@ -220,7 +232,7 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <ul className="flex flex-col gap-2">
-            {categories.map((c) =>
+            {categories.map((c, index) =>
               editingId === c.id ? (
                 <li key={c.id} className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-3">
                   <div className="flex items-center gap-2">
@@ -237,10 +249,37 @@ export function SettingsPage() {
                 </li>
               ) : (
                 <li key={c.id} className="flex items-center justify-between gap-2">
-                  <span className="flex min-w-0 items-center gap-2.5 text-sm">
-                    <CategoryIcon icon={c.icon} color={c.color} className="size-7" />
-                    <span className="truncate">{c.name}</span>
-                  </span>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveCategory(index, -1)}
+                        disabled={index === 0}
+                        aria-label="Nach oben verschieben"
+                        className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
+                      >
+                        <ChevronUp className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveCategory(index, 1)}
+                        disabled={index === categories.length - 1}
+                        aria-label="Nach unten verschieben"
+                        className="text-muted-foreground disabled:opacity-20 hover:text-foreground"
+                      >
+                        <ChevronDown className="size-3.5" />
+                      </button>
+                    </div>
+                    <span className="flex min-w-0 items-center gap-2.5 text-sm">
+                      <CategoryIcon icon={c.icon} color={c.color} className="size-7" />
+                      <span className="truncate">{c.name}</span>
+                      {(costCountByCategory.get(c.id) ?? 0) > 0 && (
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          · {costCountByCategory.get(c.id)} {costCountByCategory.get(c.id) === 1 ? 'Kosten-Position' : 'Kosten-Positionen'}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <Button variant="ghost" size="icon" onClick={() => startEdit(c)} aria-label="Bearbeiten">
                       <Pencil className="size-4" />
@@ -277,8 +316,13 @@ export function SettingsPage() {
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title={`„${deleteTarget?.name}" löschen?`}
-        description="Diese Kategorie wird endgültig entfernt. Das geht nur, wenn ihr aktuell keine Kosten zugeordnet sind."
+        description={
+          deleteTarget && (costCountByCategory.get(deleteTarget.id) ?? 0) > 0
+            ? `Dieser Kategorie sind noch ${costCountByCategory.get(deleteTarget.id)} Kosten zugeordnet. Ordne diese zuerst einer anderen Kategorie zu, bevor du sie löschst.`
+            : 'Diese Kategorie wird endgültig entfernt.'
+        }
         confirmLabel="Löschen"
+        confirmDisabled={Boolean(deleteTarget && (costCountByCategory.get(deleteTarget.id) ?? 0) > 0)}
         onConfirm={() => deleteTarget && handleDeleteCategory(deleteTarget)}
       />
 
