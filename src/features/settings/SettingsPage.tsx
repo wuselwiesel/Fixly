@@ -1,38 +1,23 @@
-import { Download, LogOut, Moon, Plus, Sun, Trash2, Upload } from 'lucide-react'
+import { Check, Download, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { IconPicker } from '@/components/IconPicker'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useUserId } from '@/features/auth/authStore'
-import { createCategory, deleteCategory, useCategories, useCosts } from '@/hooks/useCosts'
+import { createCategory, deleteCategory, updateCategory, useCategories, useCosts } from '@/hooks/useCosts'
 import { setPersonalSharing, useProfile } from '@/hooks/useProfile'
 import { COLOR_PALETTES } from '@/lib/palettes'
 import { supabase } from '@/lib/supabase'
 import { useColorPaletteStore } from '@/store/colorPalette'
 import { useThemeStore } from '@/store/theme'
 import { cn } from '@/lib/utils'
-
-const ICON_OPTIONS = [
-  'Home',
-  'Zap',
-  'ShieldCheck',
-  'Car',
-  'Smartphone',
-  'Clapperboard',
-  'AppWindow',
-  'Users',
-  'Landmark',
-  'Heart',
-  'PawPrint',
-  'Stethoscope',
-  'MoreHorizontal',
-]
+import type { Category } from '@/types'
 
 const COLOR_OPTIONS = [
   'var(--color-chart-1)',
@@ -55,12 +40,45 @@ export function SettingsPage() {
   const [newCategoryIcon, setNewCategoryIcon] = useState('MoreHorizontal')
   const [newCategoryColor, setNewCategoryColor] = useState(COLOR_OPTIONS[0])
   const [resetOpen, setResetOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editIcon, setEditIcon] = useState('MoreHorizontal')
+  const [editColor, setEditColor] = useState(COLOR_OPTIONS[0])
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
 
   async function handleAddCategory() {
     if (!newCategoryName.trim()) return
     await createCategory({ name: newCategoryName.trim(), icon: newCategoryIcon, color: newCategoryColor })
     setNewCategoryName('')
     toast('Kategorie hinzugefügt')
+  }
+
+  function startEdit(category: Category) {
+    setEditingId(category.id)
+    setEditName(category.name)
+    setEditIcon(category.icon)
+    setEditColor(category.color)
+  }
+
+  async function handleSaveEdit() {
+    if (!editingId || !editName.trim()) return
+    await updateCategory(editingId, { name: editName.trim(), icon: editIcon, color: editColor })
+    setEditingId(null)
+    toast('Kategorie aktualisiert')
+  }
+
+  async function handleDeleteCategory(category: Category) {
+    setDeleteTarget(null)
+    try {
+      await deleteCategory(category.id)
+      toast('Kategorie gelöscht')
+    } catch (err) {
+      if (err instanceof Object && 'code' in err && err.code === '23503') {
+        toast.error(`„${category.name}" wird noch von Kosten verwendet. Ordne diese zuerst einer anderen Kategorie zu.`)
+        return
+      }
+      toast.error('Kategorie konnte nicht gelöscht werden.')
+    }
   }
 
   async function handleExport() {
@@ -184,19 +202,57 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <ul className="flex flex-col gap-2">
-            {categories.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2.5 text-sm">
-                  <CategoryIcon icon={c.icon} color={c.color} className="size-7" />
-                  {c.name}
-                </span>
-                {c.isCustom && (
-                  <Button variant="ghost" size="icon" onClick={() => deleteCategory(c.id)} aria-label="Löschen">
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                )}
-              </li>
-            ))}
+            {categories.map((c) =>
+              editingId === c.id ? (
+                <li key={c.id} className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-3 sm:flex-row sm:items-center">
+                  <IconPicker value={editIcon} onChange={setEditIcon} color={editColor} />
+                  <Input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="sm:flex-1"
+                    autoFocus
+                  />
+                  <div className="flex items-center gap-1.5">
+                    {COLOR_OPTIONS.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setEditColor(color)}
+                        className="size-7 shrink-0 rounded-full transition-all"
+                        style={{
+                          backgroundColor: color,
+                          outline: editColor === color ? `2px solid ${color}` : 'none',
+                          outlineOffset: 2,
+                        }}
+                        aria-label={color}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button size="icon" onClick={handleSaveEdit} aria-label="Speichern">
+                      <Check className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingId(null)} aria-label="Abbrechen">
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                </li>
+              ) : (
+                <li key={c.id} className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2.5 text-sm">
+                    <CategoryIcon icon={c.icon} color={c.color} className="size-7" />
+                    <span className="truncate">{c.name}</span>
+                  </span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(c)} aria-label="Bearbeiten">
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(c)} aria-label="Löschen">
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
 
           <div className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-4 sm:flex-row sm:items-end">
@@ -206,18 +262,7 @@ export function SettingsPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Icon</Label>
-              <Select value={newCategoryIcon} onValueChange={setNewCategoryIcon}>
-                <SelectTrigger className="w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICON_OPTIONS.map((icon) => (
-                    <SelectItem key={icon} value={icon}>
-                      {icon}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon} color={newCategoryColor} />
             </div>
             <div className="flex gap-1.5">
               {COLOR_OPTIONS.map((color) => (
@@ -236,6 +281,15 @@ export function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title={`„${deleteTarget?.name}" löschen?`}
+        description="Diese Kategorie wird endgültig entfernt. Das geht nur, wenn ihr aktuell keine Kosten zugeordnet sind."
+        confirmLabel="Löschen"
+        onConfirm={() => deleteTarget && handleDeleteCategory(deleteTarget)}
+      />
 
       <Card>
         <CardHeader>

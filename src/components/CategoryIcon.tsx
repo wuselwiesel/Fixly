@@ -1,36 +1,6 @@
-import {
-  AppWindow,
-  Car,
-  Clapperboard,
-  Heart,
-  Home,
-  Landmark,
-  type LucideIcon,
-  MoreHorizontal,
-  PawPrint,
-  ShieldCheck,
-  Smartphone,
-  Stethoscope,
-  Users,
-  Zap,
-} from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
+import { CATEGORY_ICONS } from '@/lib/categoryIcons'
 import { cn } from '@/lib/utils'
-
-const ICONS: Record<string, LucideIcon> = {
-  Home,
-  Zap,
-  ShieldCheck,
-  Car,
-  Smartphone,
-  Clapperboard,
-  AppWindow,
-  Users,
-  Landmark,
-  Heart,
-  PawPrint,
-  Stethoscope,
-  MoreHorizontal,
-}
 
 export function CategoryIcon({
   icon,
@@ -41,7 +11,7 @@ export function CategoryIcon({
   color: string
   className?: string
 }) {
-  const Icon = ICONS[icon] ?? MoreHorizontal
+  const Icon = CATEGORY_ICONS[icon] ?? MoreHorizontal
   return (
     <span
       className={cn('flex size-9 shrink-0 items-center justify-center rounded-xl', className)}

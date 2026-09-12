@@ -128,6 +128,15 @@ export async function createCategory(input: Omit<Category, 'id' | 'isCustom'>) {
   bump()
 }
 
+export async function updateCategory(id: string, input: Partial<Omit<Category, 'id' | 'isCustom'>>) {
+  const { error } = await supabase
+    .from('categories')
+    .update({ name: input.name, color: input.color, icon: input.icon })
+    .eq('id', id)
+  if (error) throw error
+  bump()
+}
+
 export async function deleteCategory(id: string) {
   const { error } = await supabase.from('categories').delete().eq('id', id)
   if (error) throw error
