@@ -2,6 +2,7 @@ import { Check, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upl
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CategoryIcon } from '@/components/CategoryIcon'
+import { ColorPicker, THEME_COLOR_PRESETS } from '@/components/ColorPicker'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { IconPicker } from '@/components/IconPicker'
 import { Button } from '@/components/ui/button'
@@ -19,15 +20,6 @@ import { useThemeStore } from '@/store/theme'
 import { cn } from '@/lib/utils'
 import type { Category } from '@/types'
 
-const COLOR_OPTIONS = [
-  'var(--color-chart-1)',
-  'var(--color-chart-2)',
-  'var(--color-chart-3)',
-  'var(--color-chart-4)',
-  'var(--color-chart-5)',
-  'var(--color-chart-6)',
-]
-
 export function SettingsPage() {
   const { theme, toggleTheme } = useThemeStore()
   const { palette, setPalette } = useColorPaletteStore()
@@ -38,12 +30,12 @@ export function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryIcon, setNewCategoryIcon] = useState('MoreHorizontal')
-  const [newCategoryColor, setNewCategoryColor] = useState(COLOR_OPTIONS[0])
+  const [newCategoryColor, setNewCategoryColor] = useState(THEME_COLOR_PRESETS[0])
   const [resetOpen, setResetOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editIcon, setEditIcon] = useState('MoreHorizontal')
-  const [editColor, setEditColor] = useState(COLOR_OPTIONS[0])
+  const [editColor, setEditColor] = useState(THEME_COLOR_PRESETS[0])
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
@@ -230,30 +222,10 @@ export function SettingsPage() {
           <ul className="flex flex-col gap-2">
             {categories.map((c) =>
               editingId === c.id ? (
-                <li key={c.id} className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-3 sm:flex-row sm:items-center">
-                  <IconPicker value={editIcon} onChange={setEditIcon} color={editColor} />
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="sm:flex-1"
-                    autoFocus
-                  />
-                  <div className="flex items-center gap-1.5">
-                    {COLOR_OPTIONS.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setEditColor(color)}
-                        className="size-7 shrink-0 rounded-full transition-all"
-                        style={{
-                          backgroundColor: color,
-                          outline: editColor === color ? `2px solid ${color}` : 'none',
-                          outlineOffset: 2,
-                        }}
-                        aria-label={color}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-end gap-1">
+                <li key={c.id} className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-3">
+                  <div className="flex items-center gap-2">
+                    <IconPicker value={editIcon} onChange={setEditIcon} color={editColor} />
+                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="flex-1" autoFocus />
                     <Button size="icon" onClick={handleSaveEdit} aria-label="Speichern">
                       <Check className="size-4" />
                     </Button>
@@ -261,6 +233,7 @@ export function SettingsPage() {
                       <X className="size-4" />
                     </Button>
                   </div>
+                  <ColorPicker value={editColor} onChange={setEditColor} />
                 </li>
               ) : (
                 <li key={c.id} className="flex items-center justify-between gap-2">
@@ -281,29 +254,21 @@ export function SettingsPage() {
             )}
           </ul>
 
-          <div className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-4 sm:flex-row sm:items-end">
-            <div className="flex flex-1 flex-col gap-1.5">
-              <Label>Neue Kategorie</Label>
-              <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="z. B. Hobbys" />
+          <div className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label>Neue Kategorie</Label>
+                <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="z. B. Hobbys" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Icon</Label>
+                <IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon} color={newCategoryColor} />
+              </div>
+              <Button onClick={handleAddCategory} size="icon" aria-label="Hinzufügen">
+                <Plus className="size-4" />
+              </Button>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Icon</Label>
-              <IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon} color={newCategoryColor} />
-            </div>
-            <div className="flex gap-1.5">
-              {COLOR_OPTIONS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setNewCategoryColor(color)}
-                  className="size-8 rounded-full ring-offset-2 transition-all"
-                  style={{ backgroundColor: color, outline: newCategoryColor === color ? `2px solid ${color}` : 'none', outlineOffset: 2 }}
-                  aria-label={color}
-                />
-              ))}
-            </div>
-            <Button onClick={handleAddCategory} size="icon" aria-label="Hinzufügen">
-              <Plus className="size-4" />
-            </Button>
+            <ColorPicker value={newCategoryColor} onChange={setNewCategoryColor} />
           </div>
         </CardContent>
       </Card>
