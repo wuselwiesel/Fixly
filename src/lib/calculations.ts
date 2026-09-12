@@ -1,4 +1,4 @@
-import type { Cost, CostInterval } from '@/types'
+import type { Cost, CostInterval, Income } from '@/types'
 
 /** Average days per interval, used to derive daily/monthly/yearly figures consistently. */
 const INTERVAL_DAYS: Record<Exclude<CostInterval, 'custom'>, number> = {
@@ -38,6 +38,17 @@ export function sumYearly(costs: Cost[]): number {
 
 export function sumDaily(costs: Cost[]): number {
   return costs.reduce((sum, cost) => sum + getDailyAmount(cost), 0)
+}
+
+/** One-time income doesn't recur, so it's excluded from the recurring monthly figure. */
+export function toMonthlyIncomeAmount(income: Pick<Income, 'amount' | 'interval'>): number {
+  if (income.interval === 'monthly') return income.amount
+  if (income.interval === 'yearly') return income.amount / 12
+  return 0
+}
+
+export function sumMonthlyIncome(income: Income[]): number {
+  return income.reduce((sum, i) => sum + toMonthlyIncomeAmount(i), 0)
 }
 
 export const INTERVAL_LABELS: Record<CostInterval, string> = {

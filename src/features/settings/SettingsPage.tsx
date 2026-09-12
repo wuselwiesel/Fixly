@@ -9,16 +9,19 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useUserId } from '@/features/auth/authStore'
 import { createCategory, deleteCategory, swapCategoryOrder, updateCategory, useCategories, useCosts } from '@/hooks/useCosts'
+import { createIncome, deleteIncome, useIncome } from '@/hooks/useIncome'
 import { setPersonalSharing, useProfile } from '@/hooks/useProfile'
+import { INCOME_CATEGORIES, INCOME_CATEGORY_ICONS, INCOME_CATEGORY_LABELS, INCOME_INTERVAL_LABELS } from '@/lib/incomeCategories'
 import { COLOR_PALETTES } from '@/lib/palettes'
 import { supabase } from '@/lib/supabase'
 import { useColorPaletteStore } from '@/store/colorPalette'
 import { useThemeStore } from '@/store/theme'
-import { cn } from '@/lib/utils'
-import type { Category } from '@/types'
+import { cn, formatCurrency } from '@/lib/utils'
+import type { Category, IncomeCategory, IncomeInterval } from '@/types'
 
 export function SettingsPage() {
   const { theme, toggleTheme } = useThemeStore()
@@ -46,6 +49,11 @@ export function SettingsPage() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const income = useIncome()
+  const [newIncomeName, setNewIncomeName] = useState('')
+  const [newIncomeAmount, setNewIncomeAmount] = useState('')
+  const [newIncomeInterval, setNewIncomeInterval] = useState<IncomeInterval>('monthly')
+  const [newIncomeCategory, setNewIncomeCategory] = useState<IncomeCategory>('gehalt')
 
   async function handleAddCategory() {
     if (!newCategoryName.trim()) return
@@ -145,6 +153,15 @@ export function SettingsPage() {
     setNewPassword('')
     setNewPasswordConfirm('')
     toast.success('Passwort geändert')
+  }
+
+  async function handleAddIncome() {
+    const amount = Number(newIncomeAmount)
+    if (!newIncomeName.trim() || !(amount > 0)) return
+    await createIncome({ name: newIncomeName.trim(), amount, interval: newIncomeInterval, category: newIncomeCategory })
+    setNewIncomeName('')
+    setNewIncomeAmount('')
+    toast('Einkommen hinzugefügt')
   }
 
   async function handleReset() {
@@ -325,6 +342,96 @@ export function SettingsPage() {
         confirmDisabled={Boolean(deleteTarget && (costCountByCategory.get(deleteTarget.id) ?? 0) > 0)}
         onConfirm={() => deleteTarget && handleDeleteCategory(deleteTarget)}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Einkommen</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Optional: Trage dein Einkommen ein, um auf dem Dashboard zu sehen, was nach deinen Fixkosten übrig bleibt.
+          </p>
+          {income.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {income.map((i) => {
+                const Icon = INCOME_CATEGORY_ICONS[i.category]
+                return (
+                  <li key={i.id} className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2.5 text-sm">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-success/15 text-success">
+                        <Icon className="size-4" />
+                      </span>
+                      <span className="truncate">{i.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        · {formatCurrency(i.amount)} {INCOME_INTERVAL_LABELS[i.interval]}
+                      </span>
+                    </span>
+                    <Button variant="ghost" size="icon" onClick={() => deleteIncome(i.id)} aria-label="Löschen">
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          <div className="flex flex-col gap-3 rounded-2xl bg-muted/60 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label>Bezeichnung</Label>
+                <Input value={newIncomeName} onChange={(e) => setNewIncomeName(e.target.value)} placeholder="z. B. Gehalt" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Betrag (€)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="sm:w-28"
+                  value={newIncomeAmount}
+                  onChange={(e) => setNewIncomeAmount(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label>Kategorie</Label>
+                <Select value={newIncomeCategory} onValueChange={(v) => setNewIncomeCategory(v as IncomeCategory)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INCOME_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {INCOME_CATEGORY_LABELS[cat]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label>Intervall</Label>
+                <Select value={newIncomeInterval} onValueChange={(v) => setNewIncomeInterval(v as IncomeInterval)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(INCOME_INTERVAL_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleAddIncome} size="icon" aria-label="Hinzufügen" className="shrink-0">
+                <Plus className="size-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

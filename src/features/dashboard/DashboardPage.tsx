@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, PiggyBank, Receipt, Repeat, Wallet } from 'lucide-react'
+import { AlertTriangle, CalendarClock, PiggyBank, Receipt, Repeat, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import { useMemo } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { StatCard } from '@/components/StatCard'
@@ -6,19 +6,23 @@ import { CategoryIcon } from '@/components/CategoryIcon'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useCategories, useCosts } from '@/hooks/useCosts'
-import { sumDaily, sumMonthly, sumYearly, toMonthlyAmount } from '@/lib/calculations'
+import { useIncome } from '@/hooks/useIncome'
+import { sumDaily, sumMonthly, sumMonthlyIncome, sumYearly, toMonthlyAmount } from '@/lib/calculations'
 import { getCancellationInfo } from '@/lib/dates'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import type { Cost } from '@/types'
 
 export function DashboardPage() {
   const allCosts = useCosts()
   const categories = useCategories()
+  const income = useIncome()
   const active = useMemo(() => allCosts.filter((c) => c.status === 'active'), [allCosts])
 
   const monthlyTotal = sumMonthly(active)
   const yearlyTotal = sumYearly(active)
   const dailyTotal = sumDaily(active)
+  const monthlyIncomeTotal = sumMonthlyIncome(income)
+  const monthlySurplus = monthlyIncomeTotal - monthlyTotal
 
   const subscriptions = active.filter((c) => c.type === 'subscription')
   const contracts = active.filter((c) => c.type === 'contract')
@@ -190,6 +194,28 @@ export function DashboardPage() {
                   </div>
                 </div>
               </div>
+              {monthlyIncomeTotal > 0 && (
+                <>
+                  <div className="flex items-center justify-between rounded-xl bg-muted/60 px-4 py-3">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Wallet className="size-4" /> Einkommen
+                    </span>
+                    <span className="text-sm font-medium">{formatCurrency(monthlyIncomeTotal)} / Monat</span>
+                  </div>
+                  <div
+                    className={cn(
+                      'flex items-center justify-between rounded-xl px-4 py-3',
+                      monthlySurplus >= 0 ? 'bg-success/15 text-success' : 'bg-destructive/15 text-destructive',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 font-medium">
+                      {monthlySurplus >= 0 ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+                      Verfügbar
+                    </span>
+                    <span className="font-semibold">{formatCurrency(monthlySurplus)} / Monat</span>
+                  </div>
+                </>
+              )}
             </>
           )}
         </CardContent>

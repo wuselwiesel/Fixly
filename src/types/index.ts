@@ -68,13 +68,23 @@ export interface Category {
 }
 
 export type IncomeInterval = 'monthly' | 'yearly' | 'once'
+export type IncomeCategory = 'gehalt' | 'nebeneinkommen' | 'kindergeld' | 'kapitalertraege' | 'sonstiges'
 
 export interface Income {
   id: string
+  userId: string
   name: string
   amount: number
   interval: IncomeInterval
+  category: IncomeCategory
   createdAt: string
+}
+
+export interface IncomeFormInput {
+  name: string
+  amount: number
+  interval: IncomeInterval
+  category: IncomeCategory
 }
 
 export interface CostFormInput {

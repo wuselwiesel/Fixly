@@ -99,6 +99,7 @@ create table public.income (
   name text not null,
   amount numeric not null check (amount >= 0),
   interval text not null check (interval in ('monthly', 'yearly', 'once')),
+  category text not null default 'sonstiges' check (category in ('gehalt', 'nebeneinkommen', 'kindergeld', 'kapitalertraege', 'sonstiges')),
   created_at timestamptz not null default now()
 );
 

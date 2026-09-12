@@ -1,4 +1,4 @@
-import type { Category, Cost, Household, HouseholdInvite, HouseholdMember, PriceChange, Profile } from '@/types'
+import type { Category, Cost, Household, HouseholdInvite, HouseholdMember, Income, PriceChange, Profile } from '@/types'
 
 export function profileFromRow(row: any): Profile {
   return {
@@ -76,6 +76,18 @@ export function costToRow(input: Partial<Cost>) {
   if (input.isFavorite !== undefined) row.is_favorite = input.isFavorite
   if (input.split !== undefined) row.split = input.split ?? null
   return row
+}
+
+export function incomeFromRow(row: any): Income {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    amount: Number(row.amount),
+    interval: row.interval,
+    category: row.category,
+    createdAt: row.created_at,
+  }
 }
 
 export function priceChangeFromRow(row: any): PriceChange {
