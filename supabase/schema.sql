@@ -93,6 +93,15 @@ create table public.price_changes (
   changed_at timestamptz not null default now()
 );
 
+create table public.payment_occurrences (
+  id uuid primary key default gen_random_uuid(),
+  cost_id uuid not null references public.costs(id) on delete cascade,
+  due_date date not null,
+  paid_by uuid not null references public.profiles(id),
+  paid_at timestamptz not null default now(),
+  unique (cost_id, due_date)
+);
+
 create table public.income (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -110,6 +119,7 @@ alter table public.household_members enable row level security;
 alter table public.household_invites enable row level security;
 alter table public.costs enable row level security;
 alter table public.price_changes enable row level security;
+alter table public.payment_occurrences enable row level security;
 alter table public.income enable row level security;
 
 -- ============================================================
@@ -267,6 +277,53 @@ create policy "price_changes: insert via parent cost ownership"
     exists (
       select 1 from public.costs c
       where c.id = price_changes.cost_id
+        and (
+          c.user_id = auth.uid()
+          or (c.scope = 'household' and c.household_id in (
+            select household_id from public.household_members where user_id = auth.uid()
+          ))
+        )
+    )
+  );
+
+-- payment_occurrences (visibility mirrors the parent cost)
+create policy "payment_occurrences: visible via parent cost"
+  on public.payment_occurrences for select
+  using (
+    exists (
+      select 1 from public.costs c
+      where c.id = payment_occurrences.cost_id
+        and (
+          c.user_id = auth.uid()
+          or (c.scope = 'household' and c.household_id in (
+            select household_id from public.household_members where user_id = auth.uid()
+          ))
+        )
+    )
+  );
+
+create policy "payment_occurrences: insert via parent cost visibility"
+  on public.payment_occurrences for insert
+  with check (
+    paid_by = auth.uid()
+    and exists (
+      select 1 from public.costs c
+      where c.id = payment_occurrences.cost_id
+        and (
+          c.user_id = auth.uid()
+          or (c.scope = 'household' and c.household_id in (
+            select household_id from public.household_members where user_id = auth.uid()
+          ))
+        )
+    )
+  );
+
+create policy "payment_occurrences: delete via parent cost visibility"
+  on public.payment_occurrences for delete
+  using (
+    exists (
+      select 1 from public.costs c
+      where c.id = payment_occurrences.cost_id
         and (
           c.user_id = auth.uid()
           or (c.scope = 'household' and c.household_id in (

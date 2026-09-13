@@ -1,6 +1,6 @@
 import { addMonths, endOfMonth, format, isSameMonth, startOfMonth } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { CategoryIcon } from '@/components/CategoryIcon'
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCategories, useCosts } from '@/hooks/useCosts'
+import { togglePaidOccurrence, usePaidOccurrences } from '@/hooks/usePaidOccurrences'
 import { getOccurrencesInRange } from '@/lib/dates'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 export function CalendarPage() {
   return (
@@ -39,6 +40,7 @@ function MonthView() {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const costs = useCosts()
   const categories = useCategories()
+  const paidOccurrences = usePaidOccurrences()
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
   const occurrences = useMemo(() => {
@@ -46,14 +48,15 @@ function MonthView() {
     const start = startOfMonth(month)
     const end = endOfMonth(month)
     const rows = active.flatMap((cost) =>
-      getOccurrencesInRange(cost, start, end).map((date) => ({ date, cost })),
+      getOccurrencesInRange(cost, start, end).map((date) => ({ date, dateIso: format(date, 'yyyy-MM-dd'), cost })),
     )
     return rows.sort((a, b) => a.date.getTime() - b.date.getTime())
   }, [costs, month])
 
   const today = new Date()
-  const stillDue = occurrences.filter((o) => isSameMonth(month, today) && o.date >= today)
-  const stillDueSum = stillDue.reduce((sum, o) => sum + o.cost.amount, 0)
+  const openSum = occurrences
+    .filter((o) => !paidOccurrences.has(`${o.cost.id}_${o.dateIso}`))
+    .reduce((sum, o) => sum + o.cost.amount, 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -69,8 +72,8 @@ function MonthView() {
 
       {isSameMonth(month, today) && (
         <div className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 text-primary-foreground">
-          <span className="text-sm font-medium">Noch fällig diesen Monat</span>
-          <span className="font-semibold">{formatCurrency(stillDueSum)}</span>
+          <span className="text-sm font-medium">Noch offen diesen Monat</span>
+          <span className="font-semibold">{formatCurrency(openSum)}</span>
         </div>
       )}
 
@@ -78,9 +81,10 @@ function MonthView() {
         <EmptyState icon={CalendarDays} title="Keine Zahlungen" description="In diesem Monat sind keine Zahlungen fällig." />
       ) : (
         <div className="flex flex-col gap-2">
-          {occurrences.map(({ date, cost }, i) => {
+          {occurrences.map(({ date, dateIso, cost }, i) => {
             const category = categoryById.get(cost.categoryId)
-            const isPast = date < today
+            const isPaid = paidOccurrences.has(`${cost.id}_${dateIso}`)
+            const isOverdue = !isPaid && date < today
             return (
               <div
                 key={`${cost.id}-${i}`}
@@ -92,9 +96,30 @@ function MonthView() {
                     <span className="text-[10px] uppercase text-muted-foreground">{format(date, 'MMM', { locale: de })}</span>
                   </div>
                   <CategoryIcon icon={category?.icon ?? 'MoreHorizontal'} color={category?.color ?? '#999'} />
-                  <span className={isPast ? 'text-muted-foreground line-through' : 'font-medium'}>{cost.name}</span>
+                  <div className="flex flex-col">
+                    <span className={cn('font-medium', isPaid && 'text-muted-foreground line-through')}>{cost.name}</span>
+                    {isOverdue && <span className="text-xs font-medium text-destructive">Überfällig</span>}
+                  </div>
                 </div>
-                <span className="font-medium">{formatCurrency(cost.amount)}</span>
+                <div className="flex items-center gap-3">
+                  <span className={cn('font-medium', isPaid && 'text-muted-foreground line-through')}>
+                    {formatCurrency(cost.amount)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => togglePaidOccurrence(cost.id, dateIso, isPaid)}
+                    aria-label={isPaid ? 'Als offen markieren' : 'Als bezahlt markieren'}
+                    aria-pressed={isPaid}
+                    className={cn(
+                      'flex size-7 shrink-0 items-center justify-center rounded-full border transition-colors',
+                      isPaid
+                        ? 'border-success bg-success text-success-foreground'
+                        : 'border-input text-transparent hover:border-success/60 hover:text-success/60',
+                    )}
+                  >
+                    <Check className="size-4" strokeWidth={3} />
+                  </button>
+                </div>
               </div>
             )
           })}

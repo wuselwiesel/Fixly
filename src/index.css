@@ -129,7 +129,24 @@
     @apply border-border;
   }
 
+  html {
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Prevents iOS Safari from auto-zooming the page when a text field is focused.
+   Left unlayered so it beats Tailwind's text-sm utility on inputs. */
+@media (max-width: 640px) {
+  input,
+  textarea {
+    font-size: 16px !important;
   }
 }
