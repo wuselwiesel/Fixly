@@ -20,7 +20,7 @@ import { COLOR_PALETTES } from '@/lib/palettes'
 import { supabase } from '@/lib/supabase'
 import { useColorPaletteStore } from '@/store/colorPalette'
 import { useThemeStore } from '@/store/theme'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, parseDecimalInput } from '@/lib/utils'
 import type { Category, IncomeCategory, IncomeInterval } from '@/types'
 
 export function SettingsPage() {
@@ -175,7 +175,7 @@ export function SettingsPage() {
   }
 
   async function handleAddIncome() {
-    const amount = Number(newIncomeAmount)
+    const amount = parseDecimalInput(newIncomeAmount)
     if (!newIncomeName.trim() || !(amount > 0)) return
     await createIncome({ name: newIncomeName.trim(), amount, interval: newIncomeInterval, category: newIncomeCategory })
     setNewIncomeName('')
@@ -403,9 +403,8 @@ export function SettingsPage() {
               <div className="flex flex-col gap-1.5">
                 <Label>Betrag (€)</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   className="sm:w-28"
                   value={newIncomeAmount}
                   onChange={(e) => setNewIncomeAmount(e.target.value)}

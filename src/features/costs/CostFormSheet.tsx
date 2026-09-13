@@ -19,6 +19,7 @@ import { useHousehold } from '@/features/household/useHousehold'
 import { useCategories, createCost, updateCost } from '@/hooks/useCosts'
 import { INTERVAL_LABELS } from '@/lib/calculations'
 import { SPLIT_TYPE_LABELS } from '@/lib/split'
+import { parseDecimalInput } from '@/lib/utils'
 import { useCostFormStore } from '@/store/costFormStore'
 import type { CostFormInput, CostInterval, CostScope, CostType, SplitType } from '@/types'
 
@@ -52,6 +53,8 @@ export function CostFormSheet() {
   const categories = useCategories()
   const { household, members } = useHousehold()
   const [form, setForm] = useState<CostFormInput>(emptyForm(''))
+  const [amountText, setAmountText] = useState('')
+  const [shareTexts, setShareTexts] = useState<Record<string, string>>({})
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -61,9 +64,17 @@ export function CostFormSheet() {
     if (editing) {
       const { id, userId, createdAt, updatedAt, isFavorite, ...rest } = editing
       setForm(rest)
+      setAmountText(rest.amount ? String(rest.amount).replace('.', ',') : '')
+      setShareTexts(
+        Object.fromEntries(
+          Object.entries(rest.split?.shares ?? {}).map(([userId, v]) => [userId, String(v).replace('.', ',')]),
+        ),
+      )
       setShowDetails(Boolean(editing.contractEnd || editing.provider || editing.notes))
     } else {
       setForm(emptyForm(categories[0]?.id ?? ''))
+      setAmountText('')
+      setShareTexts({})
       setShowDetails(false)
     }
     setError(null)
@@ -72,6 +83,19 @@ export function CostFormSheet() {
 
   function set<K extends keyof CostFormInput>(key: K, value: CostFormInput[K]) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function handleAmountChange(raw: string) {
+    setAmountText(raw)
+    set('amount', parseDecimalInput(raw))
+  }
+
+  function handleShareChange(userId: string, raw: string) {
+    setShareTexts((t) => ({ ...t, [userId]: raw }))
+    set('split', {
+      type: form.split!.type,
+      shares: { ...form.split?.shares, [userId]: parseDecimalInput(raw) },
+    })
   }
 
   async function handleSubmit() {
@@ -121,12 +145,11 @@ export function CostFormSheet() {
             <div className="flex flex-col gap-1.5">
               <Label>Betrag (€)</Label>
               <Input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 placeholder="0,00"
-                value={form.amount || ''}
-                onChange={(e) => set('amount', Number(e.target.value))}
+                value={amountText}
+                onChange={(e) => handleAmountChange(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -220,7 +243,10 @@ export function CostFormSheet() {
                 <Label>Aufteilung</Label>
                 <Select
                   value={form.split?.type ?? 'equal'}
-                  onValueChange={(v) => set('split', { type: v as SplitType, shares: {} })}
+                  onValueChange={(v) => {
+                    setShareTexts({})
+                    set('split', { type: v as SplitType, shares: {} })
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -241,17 +267,11 @@ export function CostFormSheet() {
                     <div key={m.userId} className="flex items-center justify-between gap-3">
                       <span className="text-sm text-muted-foreground">{m.profile.displayName ?? m.profile.email}</span>
                       <Input
-                        type="number"
-                        min="0"
-                        step={form.split?.type === 'percentage' ? '1' : '0.01'}
+                        type="text"
+                        inputMode="decimal"
                         className="w-28"
-                        value={form.split?.shares?.[m.userId] ?? ''}
-                        onChange={(e) =>
-                          set('split', {
-                            type: form.split!.type,
-                            shares: { ...form.split?.shares, [m.userId]: Number(e.target.value) },
-                          })
-                        }
+                        value={shareTexts[m.userId] ?? ''}
+                        onChange={(e) => handleShareChange(m.userId, e.target.value)}
                       />
                     </div>
                   ))}

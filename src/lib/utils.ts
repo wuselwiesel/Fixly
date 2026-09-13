@@ -22,3 +22,13 @@ export function formatDateShort(dateStr: string): string {
 export function generateId(): string {
   return crypto.randomUUID()
 }
+
+/**
+ * Parses a locale-flexible decimal string (accepts "," or "." as the separator,
+ * as typed on a German keyboard) into a number. Returns 0 for empty/invalid input.
+ */
+export function parseDecimalInput(value: string): number {
+  const normalized = value.replace(',', '.').trim()
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
