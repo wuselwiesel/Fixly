@@ -15,13 +15,16 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { useUserId } from '@/features/auth/authStore'
 import { useHousehold } from '@/features/household/useHousehold'
 import { useCategories, createCost, updateCost } from '@/hooks/useCosts'
 import { INTERVAL_LABELS } from '@/lib/calculations'
 import { SPLIT_TYPE_LABELS } from '@/lib/split'
-import { parseDecimalInput } from '@/lib/utils'
+import { formatCurrency, parseDecimalInput } from '@/lib/utils'
 import { useCostFormStore } from '@/store/costFormStore'
 import type { CostFormInput, CostInterval, CostScope, CostType, SplitType } from '@/types'
+
+type AmountMode = 'total' | 'share'
 
 const TYPE_LABELS: Record<CostType, string> = {
   fixed: 'Fixkosten',
@@ -52,12 +55,26 @@ export function CostFormSheet() {
   const { open, editing, close } = useCostFormStore()
   const categories = useCategories()
   const { household, members } = useHousehold()
+  const myId = useUserId()
   const [form, setForm] = useState<CostFormInput>(emptyForm(''))
   const [amountText, setAmountText] = useState('')
+  const [amountMode, setAmountMode] = useState<AmountMode>('total')
   const [shareTexts, setShareTexts] = useState<Record<string, string>>({})
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  /** Fraction of the total that "my" share represents, for the current split settings. */
+  function myShareFraction(split: CostFormInput['split']): number | null {
+    if (!split || split.type === 'equal') {
+      return members.length > 0 ? 1 / members.length : null
+    }
+    if (split.type === 'percentage') {
+      const pct = myId ? split.shares?.[myId] : undefined
+      return pct && pct > 0 ? pct / 100 : null
+    }
+    return null
+  }
 
   useEffect(() => {
     if (!open) return
@@ -77,6 +94,7 @@ export function CostFormSheet() {
       setShareTexts({})
       setShowDetails(false)
     }
+    setAmountMode('total')
     setError(null)
     setSubmitting(false)
   }, [open, editing, categories])
@@ -88,6 +106,18 @@ export function CostFormSheet() {
   function handleAmountChange(raw: string) {
     setAmountText(raw)
     set('amount', parseDecimalInput(raw))
+  }
+
+  function handleAmountModeChange(mode: AmountMode) {
+    if (mode === amountMode) return
+    const fraction = myShareFraction(form.split)
+    if (fraction) {
+      const current = parseDecimalInput(amountText)
+      const converted = mode === 'share' ? current * fraction : current / fraction
+      setAmountText(converted ? String(Number(converted.toFixed(2))).replace('.', ',') : '')
+      set('amount', converted)
+    }
+    setAmountMode(mode)
   }
 
   function handleShareChange(userId: string, raw: string) {
@@ -105,12 +135,21 @@ export function CostFormSheet() {
     if (!(form.amount > 0)) return setError('Bitte gib einen Betrag größer 0 ein.')
     if (!form.nextPayment) return setError('Bitte gib das nächste Zahlungsdatum an.')
 
+    let payload = form
+    if (form.scope === 'household' && amountMode === 'share') {
+      const fraction = myShareFraction(form.split)
+      if (!fraction) {
+        return setError('Bitte gib deinen Prozentanteil an, damit der Gesamtbetrag berechnet werden kann.')
+      }
+      payload = { ...form, amount: form.amount / fraction }
+    }
+
     setSubmitting(true)
     try {
       if (editing) {
-        await updateCost(editing.id, form)
+        await updateCost(editing.id, payload)
       } else {
-        await createCost(form)
+        await createCost(payload)
       }
       close()
     } catch {
@@ -143,7 +182,7 @@ export function CostFormSheet() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label>Betrag (€)</Label>
+              <Label>{amountMode === 'share' ? 'Mein Anteil (€)' : 'Betrag (€)'}</Label>
               <Input
                 type="text"
                 inputMode="decimal"
@@ -245,6 +284,7 @@ export function CostFormSheet() {
                   value={form.split?.type ?? 'equal'}
                   onValueChange={(v) => {
                     setShareTexts({})
+                    if (v === 'amount') setAmountMode('total')
                     set('split', { type: v as SplitType, shares: {} })
                   }}
                 >
@@ -260,6 +300,35 @@ export function CostFormSheet() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {form.split?.type !== 'amount' && (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Betrag ist</Label>
+                  <Tabs value={amountMode} onValueChange={(v) => handleAmountModeChange(v as AmountMode)}>
+                    <TabsList className="w-full">
+                      <TabsTrigger value="total" className="flex-1">
+                        Gesamtbetrag
+                      </TabsTrigger>
+                      <TabsTrigger value="share" className="flex-1">
+                        Mein Anteil
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  {amountMode === 'share' &&
+                    (() => {
+                      const fraction = myShareFraction(form.split)
+                      return fraction ? (
+                        <p className="text-xs text-muted-foreground">
+                          Gesamtbetrag: {formatCurrency(form.amount / fraction)}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-warning-foreground">
+                          Gib unten deinen Prozentanteil an, um den Gesamtbetrag zu berechnen.
+                        </p>
+                      )
+                    })()}
+                </div>
+              )}
 
               {form.split && form.split.type !== 'equal' && (
                 <div className="flex flex-col gap-2">

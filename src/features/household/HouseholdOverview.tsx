@@ -27,6 +27,9 @@ export function HouseholdOverview({ householdId, members }: { householdId: strin
   const otherPersonalMonthly = sumMonthly(others)
   const totalVisible = householdMonthly + myPersonalMonthly + otherPersonalMonthly
 
+  /** How the shared household costs themselves are split — deliberately excludes
+   * personal costs, so one member having more private expenses doesn't skew what
+   * is otherwise a plain, configured split (e.g. 50/50) of the joint costs. */
   const distribution = useMemo(() => {
     const totals = new Map(memberIds.map((id) => [id, 0]))
     for (const cost of shared) {
@@ -35,16 +38,13 @@ export function HouseholdOverview({ householdId, members }: { householdId: strin
         totals.set(userId, (totals.get(userId) ?? 0) + toMonthlyAmount({ ...cost, amount }))
       }
     }
-    for (const cost of [...mine, ...others]) {
-      totals.set(cost.userId, (totals.get(cost.userId) ?? 0) + toMonthlyAmount(cost))
-    }
     const grandTotal = [...totals.values()].reduce((a, b) => a + b, 0)
     return members.map((m) => ({
       member: m,
       amount: totals.get(m.userId) ?? 0,
       percent: grandTotal > 0 ? ((totals.get(m.userId) ?? 0) / grandTotal) * 100 : 0,
     }))
-  }, [shared, mine, others, memberIds, members])
+  }, [shared, memberIds, members])
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,22 +66,33 @@ export function HouseholdOverview({ householdId, members }: { householdId: strin
 
       <Card>
         <CardHeader>
-          <CardTitle>Kostenverteilung</CardTitle>
+          <CardTitle>Aufteilung der Haushaltskosten</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {distribution.map(({ member, amount, percent }) => (
-            <div key={member.userId} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-sm">
-                <span>{member.profile.displayName ?? member.profile.email}</span>
-                <span className="font-medium">
-                  {formatCurrency(amount)} · {percent.toFixed(0)}%
-                </span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
-              </div>
-            </div>
-          ))}
+          {shared.length === 0 ? (
+            <p className="py-2 text-sm text-muted-foreground">
+              Noch keine gemeinsamen Kosten – die Aufteilung erscheint hier, sobald ihr welche eintragt.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Wie ihr eure gemeinsamen Kosten aufteilt – unabhängig von euren persönlichen Ausgaben.
+              </p>
+              {distribution.map(({ member, amount, percent }) => (
+                <div key={member.userId} className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{member.profile.displayName ?? member.profile.email}</span>
+                    <span className="font-medium">
+                      {formatCurrency(amount)} · {percent.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </CardContent>
       </Card>
 
