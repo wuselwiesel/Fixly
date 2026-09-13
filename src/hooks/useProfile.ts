@@ -25,3 +25,9 @@ export async function setPersonalSharing(userId: string, enabled: boolean) {
   if (error) throw error
   useRefreshBus.getState().bump()
 }
+
+export async function setDisplayName(userId: string, name: string) {
+  const { error } = await supabase.from('profiles').update({ display_name: name.trim() || null }).eq('id', userId)
+  if (error) throw error
+  useRefreshBus.getState().bump()
+}

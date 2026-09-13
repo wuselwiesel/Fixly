@@ -54,6 +54,7 @@ export function CostFormSheet() {
   const [form, setForm] = useState<CostFormInput>(emptyForm(''))
   const [showDetails, setShowDetails] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -66,6 +67,7 @@ export function CostFormSheet() {
       setShowDetails(false)
     }
     setError(null)
+    setSubmitting(false)
   }, [open, editing, categories])
 
   function set<K extends keyof CostFormInput>(key: K, value: CostFormInput[K]) {
@@ -73,17 +75,24 @@ export function CostFormSheet() {
   }
 
   async function handleSubmit() {
+    if (submitting) return
     if (!form.name.trim()) return setError('Bitte gib einen Namen ein.')
     if (!form.categoryId) return setError('Bitte wähle eine Kategorie.')
     if (!(form.amount > 0)) return setError('Bitte gib einen Betrag größer 0 ein.')
     if (!form.nextPayment) return setError('Bitte gib das nächste Zahlungsdatum an.')
 
-    if (editing) {
-      await updateCost(editing.id, form)
-    } else {
-      await createCost(form)
+    setSubmitting(true)
+    try {
+      if (editing) {
+        await updateCost(editing.id, form)
+      } else {
+        await createCost(form)
+      }
+      close()
+    } catch {
+      setError('Speichern fehlgeschlagen. Bitte versuch es erneut.')
+      setSubmitting(false)
     }
-    close()
   }
 
   return (
@@ -328,10 +337,12 @@ export function CostFormSheet() {
         </div>
 
         <SheetFooter>
-          <Button variant="outline" onClick={close}>
+          <Button variant="outline" onClick={close} disabled={submitting}>
             Abbrechen
           </Button>
-          <Button onClick={handleSubmit}>{editing ? 'Speichern' : 'Hinzufügen'}</Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Wird gespeichert…' : editing ? 'Speichern' : 'Hinzufügen'}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

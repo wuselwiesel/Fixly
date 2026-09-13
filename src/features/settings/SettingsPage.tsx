@@ -1,5 +1,5 @@
-import { Check, ChevronDown, ChevronUp, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { Check, ChevronDown, ChevronUp, Download, KeyRound, LogOut, Moon, Pencil, Plus, Sun, Trash2, Upload, User, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CategoryIcon } from '@/components/CategoryIcon'
 import { ColorPicker, THEME_COLOR_PRESETS } from '@/components/ColorPicker'
@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { useUserId } from '@/features/auth/authStore'
 import { createCategory, deleteCategory, swapCategoryOrder, updateCategory, useCategories, useCosts } from '@/hooks/useCosts'
 import { createIncome, deleteIncome, useIncome } from '@/hooks/useIncome'
-import { setPersonalSharing, useProfile } from '@/hooks/useProfile'
+import { setDisplayName, setPersonalSharing, useProfile } from '@/hooks/useProfile'
 import { INCOME_CATEGORIES, INCOME_CATEGORY_ICONS, INCOME_CATEGORY_LABELS, INCOME_INTERVAL_LABELS } from '@/lib/incomeCategories'
 import { COLOR_PALETTES } from '@/lib/palettes'
 import { supabase } from '@/lib/supabase'
@@ -49,6 +49,12 @@ export function SettingsPage() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const [nameInput, setNameInput] = useState('')
+  const [nameLoading, setNameLoading] = useState(false)
+
+  useEffect(() => {
+    setNameInput(profile?.displayName ?? '')
+  }, [profile?.displayName])
   const income = useIncome()
   const [newIncomeName, setNewIncomeName] = useState('')
   const [newIncomeAmount, setNewIncomeAmount] = useState('')
@@ -130,6 +136,19 @@ export function SettingsPage() {
       toast.success('Kategorien importiert – Kosten bitte einzeln über „Kosten hinzufügen" ergänzen')
     } catch {
       toast.error('Import fehlgeschlagen – ist die Datei ein gültiges Fixly-Backup?')
+    }
+  }
+
+  async function handleSaveName() {
+    if (!userId) return
+    setNameLoading(true)
+    try {
+      await setDisplayName(userId, nameInput)
+      toast.success('Name gespeichert')
+    } catch {
+      toast.error('Name konnte nicht gespeichert werden.')
+    } finally {
+      setNameLoading(false)
     }
   }
 
@@ -465,6 +484,34 @@ export function SettingsPage() {
           <CardTitle>Konto</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="displayName" className="flex items-center gap-2 text-sm font-medium">
+              <User className="size-4" />
+              Dein Name
+            </Label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Input
+                  id="displayName"
+                  placeholder="z. B. Sophie"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  maxLength={60}
+                />
+              </div>
+              <Button
+                onClick={handleSaveName}
+                disabled={nameLoading || nameInput.trim() === (profile?.displayName ?? '')}
+                className="gap-2"
+              >
+                {nameLoading ? 'Wird gespeichert…' : 'Speichern'}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Wird z. B. bei der Kostenverteilung im Haushalt statt deiner E-Mail angezeigt.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-3">
             <Label className="flex items-center gap-2 text-sm font-medium">
               <KeyRound className="size-4" />
